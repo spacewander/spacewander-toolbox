@@ -1,10 +1,13 @@
 #!/bin/bash
 
-if [ -d $1 ]; # if the input is a directory, use git in it; or use git in pwd
+cd `pwd`
+if [[ $# > 1 && -d $1 ]]; # if the input is a directory, use git in it; or use git in pwd
 then
     cd $1
+    echo ''
 fi
 
+echo `pwd`
 git status
 echo 'Press RETURN to continue or use CTRL-C to leave'
 read # stop here and read the RETURN
