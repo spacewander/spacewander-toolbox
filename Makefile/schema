@@ -1,0 +1,6 @@
+PATH = /home/lzx/rainbow/src/
+CXX = g++
+CXXFLAGS = -std=c++11 -Wall
+INCLUDEFLAGS = 
+LDFLAGS = 
+TARGETS = xmlParser

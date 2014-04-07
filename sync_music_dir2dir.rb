@@ -18,7 +18,7 @@ rescue Errno::ENOENT
 end
 
 Dir.chdir(SCRDIR)
-Dir.glob('*.mp3').each do |song|
+Dir.glob('**/*.mp3').each do |song|
   filename = File.join(SCRDIR, song)
   total_size += File.size(filename)
   num += 1
