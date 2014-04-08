@@ -5,7 +5,23 @@ script = $0
 filename = ARGV.first
 if filename == nil
   puts "Usage: #{script} schema \n 输入schema文件来生成对应的Makefile" 
+  show_schema
   exit(1)
+end
+
+def show_schema 
+  puts "
+  schema文件格式：
+  PATH = 生成的Makefile所在的文件夹
+  CC    = (如果空缺默认gcc)
+  CXX   = (如果空缺默认g++)
+  CFLAGS =  (如果空缺默认-Wall)
+  CXXFLAGS =  (如果空缺默认 -std=c++11 -Wall)
+  TARGETS = 目标文件名
+  # 以下为可选项
+  INCLUDEFLAGS = xxx
+  LDFLAGS   = xxx
+  "
 end
 
 # 读取schema
@@ -21,44 +37,55 @@ rescue Errno::ENOENT
   puts "#{filename} not found!"
 end
 
+def exit_if_variable_not_exist var
+  puts "需要有生成Makefile所需的变量 #{var}"
+  show_schema
+  exit(1)
+end
+
 # 检查是否有必须的项，并构造Makefile字符串
 input = ""
 if schema.has_key?("PATH") && schema["PATH"] != ""
   path = schema["PATH"]
 else
-  puts "需要有生成Makefile所在的路径变量PATH"
-  exit(1)
+  exit_if_variable_not_exist "PATH"
+end
+
+if schema.has_key?("CC") && schema["CC"] != ""
+  input += "CC\t= #{schema["CC"]}\n"
+else
+  input += "CC\t= gcc \n"
+end
+
+if schema.has_key?("CFLAGS")
+  input += "CFLAGS = #{schema["CFLAGS"]}\n"
+else
+  input += "CFLAGS = -Wall \n"
 end
 
 if schema.has_key?("CXX") && schema["CXX"] != ""
   input += "CXX\t= #{schema["CXX"]}\n"
 else
-  puts "需要有Makefile所需的编译C++文件的编译器名字变量CXX"
-  exit(1)
+  input += "CXX\t= g++ \n"
 end
 
 if schema.has_key?("CXXFLAGS")
   input += "CXXFLAGS = #{schema["CXXFLAGS"]}\n"
 else
-  puts "需要有Makefile所需的编译C++文件的编译参数变量CXXFLAGS"
-  exit(1)
+  input += "CXXFLAGS = -std=c++11 -Wall \n"
 end
 
-input += "CXXDEBUG = -g \n"
-input += "CXXRELEASE = -O2 \n"
-
+input += "DEBUG = -g \n"
+input += "RELEASE = -O2 \n"
+#TODO
 if schema.has_key?("INCLUDEFLAGS")
   input += "INCLUDEFLAGS = #{schema["INCLUDEFLAGS"]}\n"
 else
-  puts "需要有Makefile所需的编译C++文件的包含参数变量INCLUDEFLAGS"
-  exit(1)
 end
 
 if schema.has_key?("LDFLAGS")
   input += "LDFLAGS = #{schema["LDFLAGS"]}\n"
 else
-  puts "需要有Makefile所需链接参数变量LDFLAGS"
-  exit(1)
 end
 
 # 遍历项目文件夹，并生成对应的.o文件队列
@@ -69,10 +96,7 @@ rescue Errno::ENOENT => e
   exit(1)
 end
 
-cpp_files = ""
-cpp_dirs = []
-
-def traverse_dir_for_cpp dirname, filetype, prefix
+def traverse_dir_for_file dirname, filetype, prefix
   files = ""
   Dir.glob("**/*.#{filetype}").each do |f|
     filename = f.partition(/\.#{filetype}$/)[0]
@@ -93,33 +117,37 @@ def traverse_dir_for_dir dirname, prefix
   dirs
 end
 
-cpp_files = traverse_dir_for_cpp '.', 'cpp', ''
-cpp_dirs = traverse_dir_for_dir '.', ''
+files = traverse_dir_for_file '.', 'cpp', ''
+files += traverse_dir_for_file '.', 'c', ''
+dirs = traverse_dir_for_dir '.', ''
 
 # 遍历结束
-input += "OBJS\t= #{cpp_files}\n"
+input += "OBJS\t= #{files}\n"
 
 if schema.has_key?("TARGETS") && schema["TARGETS"] != ""
   input += "TARGETS = #{schema["TARGETS"]}\n"
 else
-  puts "需要有Makefile所需TARGETS"
-  exit(1)
+  exit_if_variable_not_exist "TARGETS"
 end
 
 # 生成需要清除的依赖文件和链接文件的字符串
 rm_list = ""
-cpp_dirs.each do |dir|
+dirs.each do |dir|
   rm_list += "\trm -f #{dir}/*.o #{dir}/*.d #{dir}/*.d.* \n"
 end
 
 # Makefile 需要 tab 而不是 空格
+# 另外这里在编译最终目标文件的时候使用的是C++编译器，因为C++编译器可以链接C文件编译出来的.o文件
+# 而反过来就不行
 input += "
 .PHONY:all
-all : CXXFLAGS += $(CXXDEBUG)
+all : CXXFLAGS += $(CDEBUG)
+all : CFLAGS += $(DEBUG)
 all : $(TARGETS)
 
 .PHONY:release
-release : CXXFLAGS += $(CXXRELEASE)
+release : CXXFLAGS += $(RELEASE)
+release : CFLAGS += $(RELEASE)
 release : $(TARGETS)
 
 $(TARGETS) : $(OBJS)
@@ -131,6 +159,15 @@ $(TARGETS) : $(OBJS)
 %.d: %.cpp
 \t@set -e; rm -f $@; \\
 \t$(CXX) -MM $< $(INCLUDEFLAGS) > $@.$$$$; \\
+\tsed 's,\\($*\\)\\.o[ :]*,\\1.o $@ : ,g' < $@.$$$$ > $@; \\
+\trm -f $@.$$$$
+
+%.o: %.c
+\t$(CC) -o $@ -c $< $(CFLAGS) $(INCLUDEFLAGS)
+
+%.d: %.c
+\t@set -e; rm -f $@; \\
+\t$(CC) -MM $< $(INCLUDEFLAGS) > $@.$$$$; \\
 \tsed 's,\\($*\\)\\.o[ :]*,\\1.o $@ : ,g' < $@.$$$$ > $@; \\
 \trm -f $@.$$$$
 
@@ -155,7 +192,7 @@ rescue SystemCallError => e
 end
 
 # 顺便执行文件（现在暂不开启）
-# 如果执行失败，返回shell错误标记
+# 如果执行失败，返回false， 否则返回true
 def run_target target
   # 先检查是否有多个target，如果是，不要运行
   if target.split(' ').length > 1

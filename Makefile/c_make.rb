@@ -30,27 +30,27 @@ else
   exit(1)
 end
 
-if schema.has_key?("CXX") && schema["CXX"] != ""
-  input += "CXX\t= #{schema["CXX"]}\n"
+if schema.has_key?("CC") && schema["CC"] != ""
+  input += "CC\t= #{schema["CC"]}\n"
 else
-  puts "需要有Makefile所需的编译C++文件的编译器名字变量CXX"
+  puts "需要有Makefile所需的编译C文件的编译器名字变量CC"
   exit(1)
 end
 
-if schema.has_key?("CXXFLAGS")
-  input += "CXXFLAGS = #{schema["CXXFLAGS"]}\n"
+if schema.has_key?("CFLAGS")
+  input += "CFLAGS = #{schema["CFLAGS"]}\n"
 else
-  puts "需要有Makefile所需的编译C++文件的编译参数变量CXXFLAGS"
+  puts "需要有Makefile所需的编译C文件的编译参数变量CFLAGS"
   exit(1)
 end
 
-input += "CXXDEBUG = -g \n"
-input += "CXXRELEASE = -O2 \n"
+input += "CDEBUG = -g \n"
+input += "CRELEASE = -O2 \n"
 
 if schema.has_key?("INCLUDEFLAGS")
   input += "INCLUDEFLAGS = #{schema["INCLUDEFLAGS"]}\n"
 else
-  puts "需要有Makefile所需的编译C++文件的包含参数变量INCLUDEFLAGS"
+  puts "需要有Makefile所需的编译C文件的包含参数变量INCLUDEFLAGS"
   exit(1)
 end
 
@@ -69,10 +69,10 @@ rescue Errno::ENOENT => e
   exit(1)
 end
 
-cpp_files = ""
-cpp_dirs = []
+c_files = ""
+c_dirs = []
 
-def traverse_dir_for_cpp dirname, filetype, prefix
+def traverse_dir_for_file dirname, filetype, prefix
   files = ""
   Dir.glob("**/*.#{filetype}").each do |f|
     filename = f.partition(/\.#{filetype}$/)[0]
@@ -93,11 +93,11 @@ def traverse_dir_for_dir dirname, prefix
   dirs
 end
 
-cpp_files = traverse_dir_for_cpp '.', 'cpp', ''
-cpp_dirs = traverse_dir_for_dir '.', ''
+c_files = traverse_dir_for_file '.', 'c', ''
+c_dirs = traverse_dir_for_dir '.', ''
 
 # 遍历结束
-input += "OBJS\t= #{cpp_files}\n"
+input += "OBJS\t= #{c_files}\n"
 
 if schema.has_key?("TARGETS") && schema["TARGETS"] != ""
   input += "TARGETS = #{schema["TARGETS"]}\n"
@@ -108,29 +108,29 @@ end
 
 # 生成需要清除的依赖文件和链接文件的字符串
 rm_list = ""
-cpp_dirs.each do |dir|
+c_dirs.each do |dir|
   rm_list += "\trm -f #{dir}/*.o #{dir}/*.d #{dir}/*.d.* \n"
 end
 
 # Makefile 需要 tab 而不是 空格
 input += "
 .PHONY:all
-all : CXXFLAGS += $(CXXDEBUG)
+all : CFLAGS += $(CDEBUG)
 all : $(TARGETS)
 
 .PHONY:release
-release : CXXFLAGS += $(CXXRELEASE)
+release : CFLAGS += $(CRELEASE)
 release : $(TARGETS)
 
 $(TARGETS) : $(OBJS)
-\t$(CXX) -o $@ $^  $(LDFLAGS)
+\t$(CC) -o $@ $^  $(LDFLAGS)
 
-%.o: %.cpp
-\t$(CXX) -o $@ -c $< $(CXXFLAGS) $(INCLUDEFLAGS)
+%.o: %.c
+\t$(CC) -o $@ -c $< $(CFLAGS) $(INCLUDEFLAGS)
 
-%.d: %.cpp
+%.d: %.c
 \t@set -e; rm -f $@; \\
-\t$(CXX) -MM $< $(INCLUDEFLAGS) > $@.$$$$; \\
+\t$(CC) -MM $< $(INCLUDEFLAGS) > $@.$$$$; \\
 \tsed 's,\\($*\\)\\.o[ :]*,\\1.o $@ : ,g' < $@.$$$$ > $@; \\
 \trm -f $@.$$$$
 
