@@ -4,15 +4,16 @@
 script = $0
 filename = ARGV.first
 if filename == nil
-  puts "Usage: #{script} schema \n 输入schema文件来生成对应的Makefile" 
+  puts "Usage: #{script} schema \n 输入.schema文件来生成对应的Makefile" 
   show_schema
   exit(1)
 end
 
 def show_schema 
   puts "
-  schema文件格式：
-  PATH = 生成的Makefile所在的文件夹
+  .schema文件格式：
+  文件名 xxx.schema
+  PATH = 生成的Makefile所在的文件夹（如果空缺，默认当前目录）
   CC    = (如果空缺默认gcc)
   CXX   = (如果空缺默认g++)
   CFLAGS =  (如果空缺默认-Wall)
@@ -27,11 +28,16 @@ end
 # 读取schema
 begin
   schema = {}
-  IO.foreach(filename) do |line|
-    option = line.split("=", 2)
-    option.each {|i| i.strip! }
-    option[0].upcase! # 变量名转换成大写
-    schema[option[0]] = option[1]
+  if filename =~ /.schema$/ && File.file?(filename)
+    IO.foreach(filename) do |line|
+      option = line.split("=", 2)
+      option.each {|i| i.strip! }
+      option[0].upcase! # 变量名转换成大写
+      schema[option[0]] = option[1]
+    end
+  else
+    # 把输入当作要生成的目标，然后其他设置按照默认的来
+    schema["TARGETS"] = filename
   end
 rescue Errno::ENOENT
   puts "#{filename} not found!"
@@ -48,7 +54,11 @@ input = ""
 if schema.has_key?("PATH") && schema["PATH"] != ""
   path = schema["PATH"]
 else
-  exit_if_variable_not_exist "PATH"
+  path = Dir.pwd # 如果没有给出PATH变量，那么就以当前文件夹为工作目录
+  puts "由于schema中没有给出路径变量，将以当前目录 #{path} 作为生成Makefile的目录"
+  puts "如果不想继续，使用Ctrl+c或q退出，否则按任意其他键继续"
+  user_choice = $stdin.gets.chomp
+  exit(1) if user_choice == 'q'
 end
 
 if schema.has_key?("CC") && schema["CC"] != ""
@@ -122,6 +132,10 @@ files += traverse_dir_for_file '.', 'c', ''
 dirs = traverse_dir_for_dir '.', ''
 
 # 遍历结束
+if files == ""
+  puts "找不到所需的cpp或c文件。生成结束。生成失败" 
+  exit(1)
+end
 input += "OBJS\t= #{files}\n"
 
 if schema.has_key?("TARGETS") && schema["TARGETS"] != ""
