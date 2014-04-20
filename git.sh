@@ -11,16 +11,13 @@ git status
 echo 'Press RETURN to continue or use CTRL-C to leave'
 read # stop here and read the RETURN
 
-read -p "Enter your commit : " commit
-while [ -z "$commit" ]; do
-    read -p "Enter your commit : " commit
-done
-
 git add -A
-git commit -m "$commit"
+git commit 
 echo '' # echo an empty line
 echo 'the commit will be push to origin/master immediately'
 echo 'Press RETURN to continue or use CTRL-C to leave'
 read # stop here and read the RETURN
 
 git push origin HEAD:master
+git log --stat
+

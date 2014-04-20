@@ -1,13 +1,8 @@
 #!/usr/bin/env ruby
 # encoding: UTF-8
 
-script = $0
-filename = ARGV.first
-if filename == nil
-  puts "Usage: #{script} schema \n 输入.schema文件来生成对应的Makefile" 
-  show_schema
-  exit(1)
-end
+require "rubygems"
+require "json"
 
 def show_schema 
   puts "
@@ -16,7 +11,7 @@ def show_schema
   PATH = 生成的Makefile所在的文件夹（如果空缺，默认当前目录）
   CC    = (如果空缺默认gcc)
   CXX   = (如果空缺默认g++)
-  CFLAGS =  (如果空缺默认-Wall)
+  CFLAGS =  (如果空缺默认-std=c99 -Wall)
   CXXFLAGS =  (如果空缺默认 -std=c++11 -Wall)
   TARGETS = 目标文件名
   # 以下为可选项
@@ -25,40 +20,53 @@ def show_schema
   "
 end
 
+def exit_if_variable_not_exist var
+  puts "需要有生成Makefile所需的变量 #{var}"
+  show_schema
+  exit 1
+end
+
+script = $0
+filename = ARGV.first
+if filename == nil
+  puts "Usage: #{script} schema \n 输入.schema文件来生成对应的Makefile" 
+  show_schema
+  exit 1
+end
+
+def parse_json_build_schema schema, json
+  json.each do |compiler_args|
+    schema[compiler_args[0]] = compiler_args[1]
+  end
+end
+
 # 读取schema
 begin
   schema = {}
+  # 如果输入的是schema文件，那么读取它
   if filename =~ /.schema$/ && File.file?(filename)
-    IO.foreach(filename) do |line|
-      option = line.split("=", 2)
-      option.each {|i| i.strip! }
-      option[0].upcase! # 变量名转换成大写
-      schema[option[0]] = option[1]
-    end
+    raw_json = File.open(filename).read
+    # 忽略注释
+    raw_json = raw_json.sub(/#.*\n/, "")
+    json = JSON.parse(raw_json)
+    parse_json_build_schema schema,json
   else
+    # 如果输入的不是schema文件，
     # 把输入当作要生成的目标，然后其他设置按照默认的来
     schema["TARGETS"] = filename
   end
+
 rescue Errno::ENOENT
   puts "#{filename} not found!"
 end
 
-def exit_if_variable_not_exist var
-  puts "需要有生成Makefile所需的变量 #{var}"
-  show_schema
-  exit(1)
-end
-
 # 检查是否有必须的项，并构造Makefile字符串
 input = ""
+
 if schema.has_key?("PATH") && schema["PATH"] != ""
   path = schema["PATH"]
 else
   path = Dir.pwd # 如果没有给出PATH变量，那么就以当前文件夹为工作目录
-  puts "由于schema中没有给出路径变量，将以当前目录 #{path} 作为生成Makefile的目录"
-  puts "如果不想继续，使用Ctrl+c或q退出，否则按任意其他键继续"
-  user_choice = $stdin.gets.chomp
-  exit(1) if user_choice == 'q'
 end
 
 if schema.has_key?("CC") && schema["CC"] != ""
@@ -70,7 +78,7 @@ end
 if schema.has_key?("CFLAGS")
   input += "CFLAGS = #{schema["CFLAGS"]}\n"
 else
-  input += "CFLAGS = -Wall \n"
+  input += "CFLAGS = -std=c99 -Wall \n"
 end
 
 if schema.has_key?("CXX") && schema["CXX"] != ""
@@ -87,15 +95,17 @@ end
 
 input += "DEBUG = -g \n"
 input += "RELEASE = -O2 \n"
-#TODO
+
 if schema.has_key?("INCLUDEFLAGS")
   input += "INCLUDEFLAGS = #{schema["INCLUDEFLAGS"]}\n"
 else
+  input += "INCLUDEFLAGS = \n"
 end
 
 if schema.has_key?("LDFLAGS")
   input += "LDFLAGS = #{schema["LDFLAGS"]}\n"
 else
+  input += "LDFLAGS = \n"
 end
 
 # 遍历项目文件夹，并生成对应的.o文件队列
@@ -103,7 +113,7 @@ begin
   Dir.chdir(path)
 rescue Errno::ENOENT => e
   puts e.message
-  exit(1)
+  exit 1
 end
 
 def traverse_dir_for_file dirname, filetype, prefix
@@ -134,7 +144,7 @@ dirs = traverse_dir_for_dir '.', ''
 # 遍历结束
 if files == ""
   puts "找不到所需的cpp或c文件。生成结束。生成失败" 
-  exit(1)
+  exit 1
 end
 input += "OBJS\t= #{files}\n"
 
@@ -155,7 +165,7 @@ end
 # 而反过来就不行
 input += "
 .PHONY:all
-all : CXXFLAGS += $(CDEBUG)
+all : CXXFLAGS += $(DEBUG)
 all : CFLAGS += $(DEBUG)
 all : $(TARGETS)
 
