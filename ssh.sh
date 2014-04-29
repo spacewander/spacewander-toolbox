@@ -6,5 +6,7 @@ auto_login_ssh () {
                 send -- $1\r;
                 interact;";
 } 
-auto_login_ssh $password '-o ServerAliveInterval=60 $account'
+password=''
+account=''
+auto_login_ssh $password '-o ServerAliveInterval=60 '$account
 

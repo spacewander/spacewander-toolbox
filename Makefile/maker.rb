@@ -5,19 +5,21 @@ require "rubygems"
 require "json"
 
 def show_schema 
-  puts "
+  puts '
   .schema文件格式：
   文件名 xxx.schema
-  PATH = 生成的Makefile所在的文件夹（如果空缺，默认当前目录）
-  CC    = (如果空缺默认gcc)
-  CXX   = (如果空缺默认g++)
-  CFLAGS =  (如果空缺默认-std=c99 -Wall)
-  CXXFLAGS =  (如果空缺默认 -std=c++11 -Wall)
-  TARGETS = 目标文件名
+  "PATH" : 生成的Makefile所在的文件夹（如果空缺，默认当前目录）
+  "CC"    : (如果空缺默认gcc)
+  "CXX"   : (如果空缺默认g++)
+  "CFLAGS" :  (如果空缺默认-std=c99 -Wall)
+  "CXXFLAGS" :  (如果空缺默认 -std=c++11 -Wall)
+  "TARGETS" : 目标文件名
   # 以下为可选项
-  INCLUDEFLAGS = xxx
-  LDFLAGS   = xxx
-  "
+  "INCLUDEFLAGS" : xxx
+  "LDFLAGS"   : xxx
+  "IGNORE_FILE" : xxx
+  "IGNORE_DIR" : [xxx, yyy] (想要忽略的文件夹)
+  '
 end
 
 def exit_if_variable_not_exist var
@@ -47,7 +49,8 @@ begin
   if filename =~ /.schema$/ && File.file?(filename)
     raw_json = File.open(filename).read
     # 忽略注释
-    raw_json = raw_json.sub(/#.*\n/, "")
+    raw_json.gsub!(/#.*\n/, "")
+    exit 1 if raw_json.nil?
     json = JSON.parse(raw_json)
     parse_json_build_schema schema,json
   else
@@ -110,43 +113,55 @@ end
 
 # 遍历项目文件夹，并生成对应的.o文件队列
 begin
-  Dir.chdir(path)
+  Dir.chdir path
 rescue Errno::ENOENT => e
   puts e.message
   exit 1
 end
 
-def traverse_dir_for_file dirname, filetype, prefix
-  files = ""
-  Dir.glob("**/*.#{filetype}").each do |f|
-    filename = f.partition(/\.#{filetype}$/)[0]
-    filename = "#{prefix + filename}.o"
-    files += filename
-    files += " "
+def traverse_dir_for_file schema, dirlist, filetype
+  files = blacklist = []
+  dirlist -= schema["IGNORE_DIR"] if schema.has_key?("IGNORE_DIR")
+  blacklist = schema["IGNORE_FILE"] if schema.has_key?("IGNORE_FILE")
+
+  dirlist.each do |dir|
+    Dir.chdir dir
+    Dir.glob("*.#{filetype}").each do |f|
+      files.push f.sub(/\.#{filetype}$/, '.o') unless blacklist.include?(f)
+    end
   end
   files
 end
 
-def traverse_dir_for_dir dirname, prefix
+def traverse_dir_for_dir schema, start_place
   dirs = []
+  Dir.chdir start_place
+  dirs.push start_place
   Dir.glob("**/*").each do |dir|
-    if File.directory?(dir)
+    if File.directory?(dir) && !schema["IGNORE_DIR"].include?(dir)
       dirs.push(dir)
     end
   end
   dirs
 end
 
-files = traverse_dir_for_file '.', 'cpp', ''
-files += traverse_dir_for_file '.', 'c', ''
-dirs = traverse_dir_for_dir '.', ''
+dirs = traverse_dir_for_dir(schema, '.')
+
+files = traverse_dir_for_file(schema, dirs, 'cpp')
+files += traverse_dir_for_file(schema, dirs, 'c')
 
 # 遍历结束
-if files == ""
+if files == []
   puts "找不到所需的cpp或c文件。生成结束。生成失败" 
   exit 1
 end
-input += "OBJS\t= #{files}\n"
+
+input += "OBJS\t= "
+files.each do |file| 
+  input += file
+  input += " "
+end
+input += "\n"
 
 if schema.has_key?("TARGETS") && schema["TARGETS"] != ""
   input += "TARGETS = #{schema["TARGETS"]}\n"
@@ -199,7 +214,7 @@ $(TARGETS) : $(OBJS)
 
 .PHONY:clean
 clean:
-\trm -f $(TARGETS) *.o *.d *.d.* 
+\trm -f $(TARGETS)
 #{rm_list}"
 
 # 现在进行写入，注意原文件会被覆盖哟 >_<
@@ -209,7 +224,8 @@ File.open(File.join(path, "Makefile"), 'w') {|f| f.write(input)}
 # 确保万一，先cd到目标文件夹
 Dir.chdir path
 begin
-  system("make")
+  # 之所以要调用system函数，是因为这样做才会有make的输出显示出来
+  system "make"
   status = $?.success?
 rescue SystemCallError => e
   puts e.message
@@ -226,7 +242,7 @@ def run_target target
   end
 
   begin
-    system("./#{target}")
+    system "./#{target}"
     $?.success?
   rescue SystemCallError => e
     puts e.message
@@ -236,13 +252,16 @@ end
 
 def debug target
   begin
-    system("gdb #{target}")
+    system "gdb #{target}"
   rescue SystemCallError => e
     puts e.message
   end
 end
 
-#if status && !run_target(schema["TARGETS"])
+#if status && !run_target schema["TARGETS"]
   #debug schema["TARGETS"]
 #end
+
+# 报告make等步骤是否成功完成
+#$? = status
 

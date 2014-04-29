@@ -1,9 +1,10 @@
 {
-    "PATH" : "/home/lzx/rainbow/src/",
-    "CXX" : "g++",
-    "CXXFLAGS" : "-std=c++11 -Wall",
+    "CXX" : "mpic++.mpich2",
+    "CXXFLAGS" : "-std=c++11 -Wall -lpthread -fopenmp",
     "INCLUDEFLAGS" : "",
-    "LDFLAGS" : "",
-    "TARGETS" : "xmlParser"
-    "specific" : {}
+    "LDFLAGS" : "-lpthread -fopenmp",
+    "TARGETS" : "rbtc",
+#   "IGNORE_FILE" : ["compute_thread.cpp"],
+    "IGNORE_DIR" : ["test", "test_rbt_com"]
 }
+# 注意，-fopenmp是g++的编译指令，如果要使用icpc，用-openmp代替
