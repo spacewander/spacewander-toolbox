@@ -2,9 +2,10 @@
 
 cd `pwd`
 # if the input is a directory, use git in it; or use git in pwd
-if [[ $# > 0 && -d $1 ]]; 
+if [[ $# -gt 0 && -d $1 ]]; 
 then
     cd $1
+    shift
 fi
 
 git status
@@ -18,6 +19,11 @@ echo 'the commit will be push to origin/master immediately'
 echo 'Press RETURN to continue or use CTRL-C to leave'
 read # stop here and read the RETURN
 
-git push origin HEAD:master
-git log --stat
+expect -c "set timeout 30;
+            spawn -noecho git push origin;
+            expect Username* ;
+            send -- "$USERNAME"\r;
+            expect Password* ;
+            send -- "$PASSWORD"\r;
+            interact;";
 
