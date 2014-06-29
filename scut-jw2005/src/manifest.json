@@ -1,0 +1,32 @@
+{
+  
+  "name": "scut-jw2005",
+  "description": "华工教务系统刷课插件",
+  "version": "0.0.1",
+  "content_scripts": [
+    {
+      "matches": ["http://222.201.132.114/*"],
+      "js": [
+            "js/jquery.min.js",
+            "js/content_script.js"
+            ],
+      "run_at":"document_idle"
+    }],
+   "background":{},
+  "permissions": [
+       "tabs",
+       "http://222.201.132.114/*"
+  ],
+  "options_page": "html/option.html",
+  "browser_action": {
+        "default_icon": "icon/scut16.png",
+        "default_popup": "html/popup.html"
+    },
+  "icons": {
+    "16": "icon/scut16.png",
+    "48": "icon/scut48.png",
+    "64": "icon/scut64.png",
+    "128": "icon/scut128.png"
+  },
+  "manifest_version": 2
+}
