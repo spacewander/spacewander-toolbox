@@ -88,6 +88,18 @@ OddsDialog::OddsDialog(QWidget *parent)
     mainLayout->addLayout(outputArea);
 
     setLayout(mainLayout);
+
+    connect(leftSide, SIGNAL(textChanged(QString)),this,
+            SLOT(updateLeftSide(QString)));
+    connect(rightSide, SIGNAL(textChanged(QString)),this,
+            SLOT(updateRightSide(QString)));
+
+    connect(leftMoney, SIGNAL(textChanged(QString)), this, SLOT(updateOdds()));
+    connect(rightMoney, SIGNAL(textChanged(QString)), this, SLOT(updateOdds()));
+    connect(fee, SIGNAL(textChanged(QString)), this, SLOT(updateOdds()));
+
+    connect(leftVsRight, SIGNAL(toggled(bool)), this, SLOT(switchSides()));
+    connect(rightVsLeft, SIGNAL(toggled(bool)), this, SLOT(switchSides()));
 }
 
 OddsDialog::~OddsDialog()
@@ -98,30 +110,101 @@ OddsDialog::~OddsDialog()
 /**
  * @brief OddsDialog::updateOdds
  *
- *
+ * update the odds
  */
 void OddsDialog::updateOdds()
 {
-    
+    bool ok = true;
+    double leftIn = leftMoney->text().isEmpty() ? 0 : leftMoney->text().toInt(&ok);
+    double rightIn = rightMoney->text().isEmpty() ? 0 : rightMoney->text().toInt(&ok);
+    if (!(ok && (leftIn != 0) && (rightIn != 0))) {
+        clearOdds();
+        return;
+    }
+
+    double cost = fee->text().isEmpty() ? 0 : fee->text().toInt(&ok);
+    if (!ok || cost >= 100) {
+        cost = 0;
+        fee->setText("0");
+    }
+
+    bool isLeftLarger;
+    double odds; // odds = max / min * (1 - cost / 100.0)
+    if (leftIn >= rightIn) {
+        isLeftLarger = true;
+        odds = int(leftIn / rightIn * (1 - cost / 100.0) * 100) / 100.0;
+    }
+    else {
+        isLeftLarger = false;
+        odds = int(rightIn / leftIn * (1 - cost / 100.0) * 100) / 100.0;
+    }
+
+    QString str;
+    if (leftVsRight->isChecked() == isLeftLarger) {
+        oddsFirst->setText(str.setNum(odds));
+        oddsSecond->setText(str.setNum(1));
+    }
+    else {
+        oddsFirst->setText(str.setNum(1));
+        oddsSecond->setText(str.setNum(odds));
+    }
 }
 
+/**
+ * set back to 1 : 1
+ */
+void OddsDialog::clearOdds()
+{
+    oddsFirst->setText("1");
+    oddsSecond->setText("1");
+}
+
+/**
+ * @brief OddsDialog::setCenterAndFixedHalfSide
+ * @param label
+ * @param eachSide
+ *
+ * set the style of QLabel and let it as wide as the QLineEdit above
+ */
 void OddsDialog::setCenterAndFixedHalfSide(QLabel *label, unsigned int eachSide)
 {
     label->setFixedWidth(eachSide);
     label->setAlignment(Qt::AlignHCenter);
 }
 
-void OddsDialog::updateLeftSide(const QString &left)
+void OddsDialog::updateLeftSide(QString left)
 {
-
+    if (left.isEmpty()) {
+        left = tr("左边");
+    }
+    if (leftVsRight->isChecked()) {
+        firstSide->setText(left);
+    }
+    else {
+        secondSide->setText(left);
+    }
 }
 
-void OddsDialog::updateRightSide(const QString &right)
+void OddsDialog::updateRightSide(QString right)
 {
-
+    if (right.isEmpty()) {
+        right = tr("右边");
+    }
+    if (leftVsRight->isChecked()) {
+        secondSide->setText(right);
+    }
+    else {
+        firstSide->setText(right);
+    }
 }
 
 void OddsDialog::switchSides()
 {
+    QString left = leftSide->text();
+    QString right = rightSide->text();
+    // the method below will change the value of [left|right]Side
+    updateLeftSide(left);
+    updateRightSide(right);
 
+    updateOdds();
 }

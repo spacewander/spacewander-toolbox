@@ -29,19 +29,21 @@ private:
     QGroupBox *switchBox;
     QRadioButton *leftVsRight;
     QRadioButton *rightVsLeft;
+
     QLabel *firstSide;
     QLabel *secondSide;
     QLabel *compare;
     QLabel *oddsFirst;
     QLabel *oddsSecond;
 
-    void updateOdds();
     void setCenterAndFixedHalfSide(QLabel *label, unsigned int eachSide);
+    void clearOdds();
+
 private slots:
     void switchSides();
-    void updateLeftSide(const QString &left);
-    void updateRightSide(const QString &right);
+    void updateOdds();
+    void updateLeftSide(QString left);
+    void updateRightSide(QString right);
 };
 
 #endif // DIALOG_H
-
