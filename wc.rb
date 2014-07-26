@@ -102,7 +102,6 @@ OptionParser.new do |opts|
 
 end.parse!
 
-p options
 sum = {}
 patterns = ARGV.uniq
 
