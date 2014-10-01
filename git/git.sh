@@ -1,6 +1,11 @@
 #!/bin/bash
 
-cd `pwd`
+top="$(git rev-parse --show-toplevel)"
+result=$?
+test $result != 0 && exit $result
+
+cd "$top"
+
 # if the input is a directory, use git in it; or use git in pwd
 if [[ $# -gt 0 && -d $1 ]]; 
 then

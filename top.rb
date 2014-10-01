@@ -1,6 +1,28 @@
 #!/usr/bin/env ruby
 # encoding: UTF-8
 
+require 'optparse'
+OptionParser.new do |opts|
+  opts.banner = """
+    用法: 
+    #{$0} -h 显示帮助
+    #{$0} cmd 显示某个命令的使用次数
+    #{$0} 显示最常用的30个命令
+  """
+
+  opts.on("-h", "--help", "print help message") do |f|
+    puts opts.banner
+    exit(0)
+  end
+
+  begin
+    opts.parse!
+  rescue OptionParser::InvalidOption
+    puts opts.banner
+    exit(0)
+  end
+end
+
 # 显示最常用的命令（通过读取历史文件）
 # 同时加入一个按输入字符串来查找某个命令的使用次数的功能
 
@@ -25,8 +47,14 @@ files = ['/home/lzx/zsh_his1', '/home/lzx/.zsh_history']
 files.each do |filename|
   File.new(filename).each_line do |line|
     if line.index(';')
-      history.push(line.split(';')[1].split(' ')[0]) # the delimitor only for zsh
+      begin 
+        # the delimitor only for zsh
+        history.push(line.split(';')[1].split(' ')[0])
+      rescue Exception
+        # do nothing
+      end
     end
+
   end
 end
 
