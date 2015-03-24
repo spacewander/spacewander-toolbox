@@ -26,11 +26,22 @@ echo 'Press RETURN to continue or use CTRL-C to leave'
 read # stop here and read the RETURN
 
 # replace $USERNAME and $PASSWORD to your GitHub username and password
-expect -c "set timeout 30;
-            spawn -noecho git push origin --set-upstream $cur_branch;
-            expect Username* ;
-            send -- $USERNAME\r;
-            expect Password* ;
-            send -- $PASSWORD\r;
-            interact;";
+if [[ "$cur_branch" == "master" ]]
+then
+    expect -c "set timeout 30;
+                spawn -noecho git push origin $cur_branch;
+                expect Username* ;
+                send -- $USERNAME\r;
+                expect Password* ;
+                send -- $PASSWORD\r;
+                interact;";
+else
+    expect -c "set timeout 30;
+                spawn -noecho git push origin --set-upstream $cur_branch;
+                expect Username* ;
+                send -- $USERNAME\r;
+                expect Password* ;
+                send -- $PASSWORD\r;
+                interact;";
 
+fi
