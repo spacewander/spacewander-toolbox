@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 
 # 向.zsh_aliases添加别名，或用你喜欢的编辑器修改alias文件
 # 用法： alias.sh name alias_name , 
@@ -53,7 +53,7 @@ then
 else
     echo "alias $cmd='$path'" >> "$zsh_aliases"
 fi
-source "$zsh_aliases"
+#source "$zsh_aliases"
 
 #if [ -e  "$bash_aliases" ]
 #then
