@@ -1,8 +1,6 @@
 #!/bin/bash
 
 # 向.zsh_aliases添加别名，或用你喜欢的编辑器修改alias文件
-# 用法： alias.sh name alias_name , 
-# 比如 alias.sh git.sh gi 或 alias.sh 'rake test' rt
 
 zsh_aliases="$HOME/.zsh_aliases"
 bash_aliases="$HOME/.bash_aliases"
@@ -24,28 +22,27 @@ then
         case $1 in
             -b )
                 "$EDITOR" "$bash_aliases"
-                source "$bash_aliases"
                 ;;
             -z )
                 "$EDITOR" "$zsh_aliases"
-                source "$zsh_aliases"
                 ;;
             * )
-                echo "用法： alia.sh name alias_name, 比如 alias.sh git.sh git"
+                echo "用法： aliashit alias_name name, 比如 $0 gopm 'git pull own master'"
         esac
+    else
+        "$EDITOR" "$zsh_aliases"
     fi
-    exit 0
 fi
 
-path=$1
+path=$2
 
 # 展开相对路径名
-if [[ $1 =~ ^\./ || $1 =~ ^\.\. ]]
+if [[ "$path" =~ ^\./ || "$path" =~ ^\.\. ]]
 then
-    path="$(pwd)/$(basename $1)"
+    path="$(pwd)/$(basename "$path")"
 fi
 
-cmd=$2
+cmd=$1
 
 if [[ $path =~ \' ]]
 then
