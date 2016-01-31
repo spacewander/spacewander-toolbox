@@ -8,9 +8,9 @@ cd "$top"
 cur_branch="$(git rev-parse --abbrev-ref HEAD)"
 
 # if the input is a directory, use git in it; or use git in pwd
-if [[ $# -gt 0 && -d $1 ]]; 
+if [[ $# -gt 0 && -d "$1" ]]; 
 then
-    cd $1
+    cd "$1"
     shift
 fi
 
@@ -19,7 +19,7 @@ echo 'Press RETURN to continue or use CTRL-C to leave'
 read # stop here and read the RETURN
 
 git add -A
-git commit 
+git commit -v
 echo '' # echo an empty line
 echo "the commit will be push to origin/""$cur_branch"" immediately"
 echo 'Press RETURN to continue or use CTRL-C to leave'
