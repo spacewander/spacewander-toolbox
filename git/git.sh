@@ -18,7 +18,8 @@ git status
 echo 'Press RETURN to continue or use CTRL-C to leave'
 read # stop here and read the RETURN
 
-git add -A
+git status --short | grep '^[A|D|M]' > /dev/null
+test $? -gt 0 && git add -u
 git commit -v
 echo '' # echo an empty line
 echo "the commit will be push to origin/""$cur_branch"" immediately"
