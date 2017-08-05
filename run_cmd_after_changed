@@ -1,0 +1,34 @@
+#!/usr/bin/env ruby
+# encoding: UTF-8
+# Auto execute cmd after file modified
+# Usage: run_cmd_after_changed [template_file:~/spacewander/go]
+# template_file format:
+# {
+# "patterns": ["lua/.*\\.lua$", "conf/.*\\.conf$"],
+# "cmd": "nginx -p . -s reload"
+# }
+require 'json'
+
+require 'listen' # gem install listen (https://github.com/guard/listen)
+
+
+template_file = ARGV[0]
+if template_file.nil? then
+  template_file = File.join(Dir.home, "spacewander", File.basename(`git rev-parse --show-toplevel`).rstrip)
+end
+args = JSON.load(File.read(template_file + ".json"))
+unless args["patterns"].is_a? Array then
+  args["patterns"] = [args["patterns"]]
+end
+re_patterns = args["patterns"].map {|s| Regexp.new(s)}
+cmd = args["cmd"]
+puts "Run cmd '#{cmd}' after #{re_patterns} changed"
+listener = Listen.to(".", relative: true, delay: 1, only:re_patterns) do |modified, added, removed|
+  return if modified.empty?
+  puts "#{Time.now} Detected file change: #{modified}"
+  puts "#{Time.now} Run cmd: #{cmd}"
+  `#{cmd}`
+  puts "#{Time.now} Finished"
+end
+listener.start
+sleep
