@@ -24,7 +24,7 @@ re_patterns = args["patterns"].map {|s| Regexp.new(s)}
 cmd = args["cmd"]
 puts "Run cmd '#{cmd}' after #{re_patterns} changed"
 listener = Listen.to(".", relative: true, delay: 1, only:re_patterns) do |modified, added, removed|
-  return if modified.empty?
+  next if modified.empty?
   puts "#{Time.now} Detected file change: #{modified}"
   puts "#{Time.now} Run cmd: #{cmd}"
   `#{cmd}`
