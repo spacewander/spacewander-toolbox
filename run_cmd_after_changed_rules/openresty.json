@@ -1,0 +1,4 @@
+{
+    "patterns": ["lua/.*\\.lua$", "conf/.*\\.conf$"],
+    "cmd": "nginx -p . -s reload"
+}

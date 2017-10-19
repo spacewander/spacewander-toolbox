@@ -1,0 +1,4 @@
+{
+    "patterns": "\\.go$",
+    "cmd": "go build"
+}
