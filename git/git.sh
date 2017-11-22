@@ -32,27 +32,12 @@ if [[ $? -gt 0 ]]; then
 fi
 git commit -v
 echo '' # echo an empty line
-echo "the commit will be push to origin/""$cur_branch"" immediately"
-echo 'Press RETURN to continue or use CTRL-C to leave'
-read # stop here and read the RETURN
-
-# replace $USERNAME and $PASSWORD to your GitHub username and password
-if [[ "$cur_branch" == "master" ]]
+remote=$(git config branch.$cur_branch.remote)
+if [ -z "$remote" ]
 then
-    expect -c "set timeout 30;
-                spawn -noecho git push origin $cur_branch;
-                expect Username* ;
-                send -- $USERNAME\r;
-                expect Password* ;
-                send -- $PASSWORD\r;
-                interact;";
-else
-    expect -c "set timeout 30;
-                spawn -noecho git push origin --set-upstream $cur_branch;
-                expect Username* ;
-                send -- $USERNAME\r;
-                expect Password* ;
-                send -- $PASSWORD\r;
-                interact;";
-
+    remote=origin
 fi
+echo "the commit will be push to ""$remote""/""$cur_branch"" immediately"
+echo 'Press RETURN to continue or use CTRL-C to leave'
+read -r # stop here and read the RETURN
+git push "$remote" --set-upstream "$cur_branch"
